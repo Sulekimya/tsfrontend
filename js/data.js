@@ -3,6 +3,7 @@
    which reads them from the real CSV dataset.
 ─────────────────────────────────────────────────────────────────── */
 
+
 const COUNTIES = {
   "Nairobi":   ["Westlands","Dagoretti North","Dagoretti South","Langata","Kibra","Roysambu","Kasarani","Ruaraka","Embakasi South","Embakasi North","Embakasi Central","Embakasi East","Embakasi West","Makadara","Kamukunji","Starehe","Mathare"],
   "Mombasa":   ["Changamwe","Jomvu","Kisauni","Nyali","Likoni","Mvita"],
@@ -88,7 +89,7 @@ async function initDropdowns() {
       catSel.add(new Option(cat, cat));
     });
 
-    console.log('✅ Loaded', Object.keys(FOOD_CATEGORIES).length,
+    console.log(' Loaded', Object.keys(FOOD_CATEGORIES).length,
                 'categories from backend,',
                 Object.values(FOOD_CATEGORIES).flat().length, 'commodities');
   } catch (e) {

@@ -2,7 +2,7 @@
 
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://127.0.0.1:5000'
-  : 'https://foodpredictor-backend.onrender.com';   // ← update after deploy
+  : 'https://foodpredictor-backend.onrender.com';
 
 let chartMonthly = null;
 let chartYoy     = null;
