@@ -1,15 +1,13 @@
 /* ── app.js — Frontend prediction logic ─────────────────────────── */
-
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://127.0.0.1:5000'
-  : 'https://foodpredictor-backend.onrender.com';
+/* NOTE: API_BASE is defined in data.js (which loads first).         */
+/* Do NOT redefine it here — that caused the original dropdown bug.  */
 
 let chartMonthly = null;
 let chartYoy     = null;
 
 /* ── Init on page load ── */
 document.addEventListener('DOMContentLoaded', () => {
-  initDropdowns();   // loads counties + fetches categories from backend
+  initDropdowns();   // defined in data.js — loads counties + fetches categories from backend
 
   // Pre-select current year and month
   const now = new Date();
@@ -54,7 +52,6 @@ async function runPrediction() {
 
   } catch (err) {
     console.error('Prediction error:', err.message);
-    // Show friendly error in result area
     showError(`Could not get prediction: ${err.message}. Make sure the backend is running.`);
   } finally {
     btn.disabled = false;

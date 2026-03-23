@@ -1,8 +1,12 @@
 /* ── data.js — Kenya Counties + Sub-counties (static) ────────────
-   Food categories/types are loaded dynamically from the backend API
-   which reads them from the real CSV dataset.
+   API_BASE is defined HERE so it is available when initDropdowns()
+   is called on DOMContentLoaded (before app.js runs its own copy).
 ─────────────────────────────────────────────────────────────────── */
 
+// ── API base URL (must be defined before initDropdowns is called) ──
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://127.0.0.1:5000'
+  : 'https://foodpredictor-backend.onrender.com';
 
 const COUNTIES = {
   "Nairobi":   ["Westlands","Dagoretti North","Dagoretti South","Langata","Kibra","Roysambu","Kasarani","Ruaraka","Embakasi South","Embakasi North","Embakasi Central","Embakasi East","Embakasi West","Makadara","Kamukunji","Starehe","Mathare"],
@@ -29,6 +33,17 @@ const COUNTIES = {
 
 const MONTHS_FULL  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// Built-in fallback commodity list (used when backend is offline)
+const FALLBACK_CATEGORIES = {
+  "Legumes & Pulses":    ["Cauli Local","Cauli Local(Jyapu)","French Bean(Local)","French Bean(Hybrid)","French Bean(Rajma)","Cow pea(Long)","Cowpea(Short)","Green Peas","Soyabean Green","Beans Dry","Lentils","Green Gram"],
+  "Vegetables":          ["Brinjal Long","Brinjal Round","Raddish White(Local)","Raddish White(Hybrid)","Tomato Local","Tomato Hybrid","Onion Dry(Local)","Onion Dry(Imported)","Potato White","Potato Red","Cabbage Local","Spinach Local","Carrot Local","Carrot Hybrid","Cucumber Local","Capsicum Mixed"],
+  "Grains & Cereals":    ["Maize Dry","Wheat","Rice (Coarse)","Rice (Medium)","Rice (Fine)"],
+  "Fruits":              ["Banana Local","Mango Local","Orange Local","Avocado"],
+  "Dairy & Eggs":        ["Milk Fresh","Eggs (Tray)"],
+  "Meat & Fish":         ["Beef Bone-in","Goat Meat"],
+  "Spices & Condiments": ["Sugar","Salt Iodized","Cooking Oil (Sunflower)","Tea Leaves"],
+};
 
 // Loaded from backend API — populated by initDropdowns()
 let FOOD_CATEGORIES = {};
@@ -72,41 +87,48 @@ function loadFoodTypes() {
   }
 }
 
+/* ── Populate category dropdown from a categories object ── */
+function _populateCategories(catSel, categories) {
+  catSel.innerHTML = '<option value="">Select food category</option>';
+  Object.keys(categories).sort().forEach(cat => {
+    catSel.add(new Option(cat, cat));
+  });
+}
+
 /* ── Fetch categories from backend, populate dropdowns ── */
 async function initDropdowns() {
+  // Counties are always populated from static data — no backend needed
   populateCounties();
 
   const catSel = document.getElementById('sel-category');
   if (!catSel) return;
 
+  // Show a loading state while we try the backend
+  catSel.innerHTML = '<option value="">Loading categories…</option>';
+  catSel.disabled = true;
+
   try {
-    const res  = await fetch(`${API_BASE}/api/commodities`);
-    if (!res.ok) throw new Error('API unreachable');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+    const res = await fetch(`${API_BASE}/api/commodities`, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     FOOD_CATEGORIES = await res.json();
 
-    catSel.innerHTML = '<option value="">Select food category</option>';
-    Object.keys(FOOD_CATEGORIES).sort().forEach(cat => {
-      catSel.add(new Option(cat, cat));
-    });
+    catSel.disabled = false;
+    _populateCategories(catSel, FOOD_CATEGORIES);
 
-    console.log(' Loaded', Object.keys(FOOD_CATEGORIES).length,
+    console.log('✅ Loaded', Object.keys(FOOD_CATEGORIES).length,
                 'categories from backend,',
                 Object.values(FOOD_CATEGORIES).flat().length, 'commodities');
   } catch (e) {
-    console.warn('Backend offline — using built-in commodity list');
-    // Fallback commodity list matching the CSV screenshot
-    FOOD_CATEGORIES = {
-      "Legumes & Pulses":    ["Cauli Local","Cauli Local(Jyapu)","French Bean(Local)","French Bean(Hybrid)","French Bean(Rajma)","Cow pea(Long)","Cowpea(Short)","Green Peas","Soyabean Green","Beans Dry","Lentils","Green Gram"],
-      "Vegetables":          ["Brinjal Long","Brinjal Round","Raddish White(Local)","Raddish White(Hybrid)","Tomato Local","Tomato Hybrid","Onion Dry(Local)","Onion Dry(Imported)","Potato White","Potato Red","Cabbage Local","Spinach Local","Carrot Local","Carrot Hybrid","Cucumber Local","Capsicum Mixed"],
-      "Grains & Cereals":    ["Maize Dry","Wheat","Rice (Coarse)","Rice (Medium)","Rice (Fine)"],
-      "Fruits":              ["Banana Local","Mango Local","Orange Local","Avocado"],
-      "Dairy & Eggs":        ["Milk Fresh","Eggs (Tray)"],
-      "Meat & Fish":         ["Beef Bone-in","Goat Meat"],
-      "Spices & Condiments": ["Sugar","Salt Iodized","Cooking Oil (Sunflower)","Tea Leaves"],
-    };
-    catSel.innerHTML = '<option value="">Select food category</option>';
-    Object.keys(FOOD_CATEGORIES).sort().forEach(cat => {
-      catSel.add(new Option(cat, cat));
-    });
+    console.warn('⚠️ Backend offline or unreachable — using built-in commodity list:', e.message);
+
+    // Use the built-in fallback so the UI is always functional
+    FOOD_CATEGORIES = FALLBACK_CATEGORIES;
+    catSel.disabled = false;
+    _populateCategories(catSel, FOOD_CATEGORIES);
   }
 }
